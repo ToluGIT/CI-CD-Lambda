@@ -22,6 +22,34 @@ Parameters:
     Type: String
 
 Resources:
+  # Pre-traffic hook Lambda function for validation
+  PreTrafficHookFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${LambdaFunctionName}-pre-traffic-hook"
+      Handler: pre_traffic_hook.lambda_handler
+      Role: !Ref LambdaExecutionRoleArn
+      Runtime: python3.11
+      Timeout: 60
+      MemorySize: 128
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3Key
+
+  # Post-traffic hook Lambda function for validation
+  PostTrafficHookFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${LambdaFunctionName}-post-traffic-hook"
+      Handler: post_traffic_hook.lambda_handler
+      Role: !Ref LambdaExecutionRoleArn
+      Runtime: python3.11
+      Timeout: 60
+      MemorySize: 128
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3Key
+
   CodeDeployApplication:
     Type: AWS::CodeDeploy::Application
     Properties:
@@ -52,34 +80,6 @@ Resources:
       Name: live
       FunctionName: !Ref LambdaFunction
       FunctionVersion: !GetAtt LambdaVersion.Version
-
-  # Pre-traffic hook Lambda function for validation
-  PreTrafficHookFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub "${LambdaFunctionName}-pre-traffic-hook"
-      Handler: pre_traffic_hook.lambda_handler
-      Role: !Ref LambdaExecutionRoleArn
-      Runtime: python3.11
-      Timeout: 60
-      MemorySize: 128
-      Code:
-        S3Bucket: !Ref S3BucketName
-        S3Key: !Ref S3Key
-
-  # Post-traffic hook Lambda function for validation
-  PostTrafficHookFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      FunctionName: !Sub "${LambdaFunctionName}-post-traffic-hook"
-      Handler: post_traffic_hook.lambda_handler
-      Role: !Ref LambdaExecutionRoleArn
-      Runtime: python3.11
-      Timeout: 60
-      MemorySize: 128
-      Code:
-        S3Bucket: !Ref S3BucketName
-        S3Key: !Ref S3Key
 
   CodeDeployDeploymentGroup:
     Type: AWS::CodeDeploy::DeploymentGroup

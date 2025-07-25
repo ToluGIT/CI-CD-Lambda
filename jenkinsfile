@@ -141,6 +141,35 @@ pipeline {
                             echo 'Lambda function code updated successfully.'
                         }
 
+                        // Also update the hook functions
+                        echo 'Updating pre-traffic hook function...'
+                        def preHookResult = sh(
+                            script: """
+                                aws lambda update-function-code \
+                                    --function-name ${LAMBDA_FUNCTION_NAME}-pre-traffic-hook \
+                                    --s3-bucket ${BUCKET_NAME} \
+                                    --s3-key lambda_function.zip
+                            """,
+                            returnStatus: true
+                        )
+                        
+                        echo 'Updating post-traffic hook function...'
+                        def postHookResult = sh(
+                            script: """
+                                aws lambda update-function-code \
+                                    --function-name ${LAMBDA_FUNCTION_NAME}-post-traffic-hook \
+                                    --s3-bucket ${BUCKET_NAME} \
+                                    --s3-key lambda_function.zip
+                            """,
+                            returnStatus: true
+                        )
+                        
+                        if (preHookResult != 0 || postHookResult != 0) {
+                            echo 'Warning: Hook function updates may have failed, but continuing...'
+                        } else {
+                            echo 'Hook functions updated successfully.'
+                        }
+
                         env.INITIAL_DEPLOYMENT = 'false'
                     } else {
                         echo 'Creating new Lambda function, alias, and CodeDeploy resources...'
