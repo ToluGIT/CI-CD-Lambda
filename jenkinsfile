@@ -22,7 +22,7 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/ToluGIT/testlambda.git'
+                git branch: 'main', url: 'https://github.com/ToluGIT/CI-CD-Lambda.git'
             }
         }
 
@@ -34,25 +34,11 @@ pipeline {
             }
         }
 
-        stage('Debug: Print Bandit Report') {
-            steps {
-                echo 'Contents of bandit_report.json:'
-                sh 'cat bandit_report.json || echo "bandit_report.json not found or empty"'
-            }
-        }
-
         stage('Security: Infrastructure Scan') {
             steps {
                 echo 'Scanning CloudFormation Template with cfn-nag...'
                 sh 'cfn_nag_scan --input-path deployment_production.yaml --output-format json > cfn_nag_report.json || true'
                 archiveArtifacts artifacts: 'cfn_nag_report.json', fingerprint: true
-            }
-        }
-
-        stage('Debug: Print cfn-nag Report') {
-            steps {
-                echo 'Contents of cfn_nag_report.json:'
-                sh 'cat cfn_nag_report.json || echo "cfn_nag_report.json not found or empty"'
             }
         }
 
@@ -224,17 +210,6 @@ pipeline {
                         echo 'AppSpec file updated with current and target versions.'
                     }
                 }
-            }
-        }
-
-        stage('Verify AppSpec File') {
-            when {
-                expression {
-                    env.INITIAL_DEPLOYMENT == 'false'
-                }
-            }
-            steps {
-                sh 'cat appspec.yaml'
             }
         }
 
