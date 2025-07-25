@@ -1,9 +1,12 @@
 version: 0.0
 Resources:
-  - blueGreenLambdaFunction:
+  - myLambdaFunction:
       Type: AWS::Lambda::Function
       Properties:
         Name: "blue-green-lambda"
         Alias: "live"
         CurrentVersion: "{{CURRENT_VERSION}}"
         TargetVersion: "{{TARGET_VERSION}}"
+Hooks:
+  - BeforeAllowTraffic: "blue-green-lambda-pre-traffic-hook"
+  - AfterAllowTraffic: "blue-green-lambda-post-traffic-hook"

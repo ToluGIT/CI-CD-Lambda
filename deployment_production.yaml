@@ -34,7 +34,7 @@ Resources:
       FunctionName: !Ref LambdaFunctionName
       Handler: lambda_function.lambda_handler
       Role: !Ref LambdaExecutionRoleArn
-      Runtime: python3.8
+      Runtime: python3.11
       Timeout: 15
       MemorySize: 128
       Code:
@@ -53,13 +53,41 @@ Resources:
       FunctionName: !Ref LambdaFunction
       FunctionVersion: !GetAtt LambdaVersion.Version
 
+  # Pre-traffic hook Lambda function for validation
+  PreTrafficHookFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${LambdaFunctionName}-pre-traffic-hook"
+      Handler: pre_traffic_hook.lambda_handler
+      Role: !Ref LambdaExecutionRoleArn
+      Runtime: python3.11
+      Timeout: 60
+      MemorySize: 128
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3Key
+
+  # Post-traffic hook Lambda function for validation
+  PostTrafficHookFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${LambdaFunctionName}-post-traffic-hook"
+      Handler: post_traffic_hook.lambda_handler
+      Role: !Ref LambdaExecutionRoleArn
+      Runtime: python3.11
+      Timeout: 60
+      MemorySize: 128
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3Key
+
   CodeDeployDeploymentGroup:
     Type: AWS::CodeDeploy::DeploymentGroup
     Properties:
       ApplicationName: !Ref CodeDeployApplicationName
       DeploymentGroupName: !Ref DeploymentGroupName
       ServiceRoleArn: !Ref CodeDeployServiceRoleArn
-      DeploymentConfigName: CodeDeployDefault.LambdaAllAtOnce
+      DeploymentConfigName: CodeDeployDefault.LambdaCanary10Percent5Minutes
       DeploymentStyle:
         DeploymentType: BLUE_GREEN
         DeploymentOption: WITH_TRAFFIC_CONTROL
@@ -67,3 +95,4 @@ Resources:
         Enabled: true
         Events:
           - DEPLOYMENT_FAILURE
+          - DEPLOYMENT_STOP_ON_ALARM

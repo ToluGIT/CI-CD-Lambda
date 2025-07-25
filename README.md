@@ -120,7 +120,7 @@ This project demonstrates how to set up a CI/CD pipeline using Jenkins to deploy
     
 ### 1\. Clone the Repository
    
-        .git clone https://github.com/YourUsername/YourRepository.git
+
          cd YourRepository
 -----
 ### 2\. Install Security Tools on Jenkins Agents
@@ -193,7 +193,7 @@ Ensure that the following security tools are installed on the Jenkins agent mach
     
     *   **Pipeline Script from SCM**:
         *   **SCM**: Git
-        *   **Repository URL**: `https://github.com/YourUsername/YourRepository.git`
+        *   **Repository URL**: ` `
         *   **Script Path**: `Jenkinsfile`
 
 * * *
