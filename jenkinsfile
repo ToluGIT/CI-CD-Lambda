@@ -118,13 +118,14 @@ pipeline {
         stage('Deploy to Lambda') {
             steps {
                 script {
-                    def aliasExists = sh(
-                        script: "aws lambda get-alias --function-name ${LAMBDA_FUNCTION_NAME} --name live",
+                    // Check if CloudFormation stack exists
+                    def stackExists = sh(
+                        script: "aws cloudformation describe-stacks --stack-name lambda-blue-green-stack",
                         returnStatus: true
                     ) == 0
 
-                    if (aliasExists) {
-                        echo 'Updating existing Lambda function...'
+                    if (stackExists) {
+                        echo 'Stack exists - updating existing Lambda function...'
 
                         def updateResult = sh(
                             script: """
@@ -172,12 +173,12 @@ pipeline {
 
                         env.INITIAL_DEPLOYMENT = 'false'
                     } else {
-                        echo 'Creating new Lambda function, alias, and CodeDeploy resources...'
+                        echo 'First deployment - creating Lambda function with initial template...'
 
                         def deployResult = sh(
                             script: """
                                 aws cloudformation deploy \
-                                    --template-file deployment_production.yaml \
+                                    --template-file deployment_production_initial.yaml \
                                     --stack-name lambda-blue-green-stack \
                                     --capabilities CAPABILITY_NAMED_IAM \
                                     --parameter-overrides \
@@ -192,9 +193,9 @@ pipeline {
                             returnStatus: true
                         )
                         if (deployResult != 0) {
-                            error 'Failed to deploy CloudFormation stack.'
+                            error 'Failed to deploy initial CloudFormation stack.'
                         } else {
-                            echo 'CloudFormation stack deployed successfully.'
+                            echo 'Initial CloudFormation stack deployed successfully.'
                         }
 
                         env.INITIAL_DEPLOYMENT = 'true'
@@ -259,7 +260,47 @@ pipeline {
             }
         }
 
+        stage('Upgrade Stack for Blue-Green') {
+            when {
+                expression {
+                    env.INITIAL_DEPLOYMENT == 'true'
+                }
+            }
+            steps {
+                script {
+                    echo 'Upgrading stack to enable Blue-Green deployments...'
+                    def upgradeResult = sh(
+                        script: """
+                            aws cloudformation deploy \
+                                --template-file deployment_production.yaml \
+                                --stack-name lambda-blue-green-stack \
+                                --capabilities CAPABILITY_NAMED_IAM \
+                                --parameter-overrides \
+                                    LambdaExecutionRoleArn=${LAMBDA_EXECUTION_ROLE_ARN} \
+                                    CodeDeployServiceRoleArn=${CODEDEPLOY_SERVICE_ROLE_ARN} \
+                                    LambdaFunctionName=${LAMBDA_FUNCTION_NAME} \
+                                    CodeDeployApplicationName=${CODEDEPLOY_APPLICATION_NAME} \
+                                    DeploymentGroupName=${DEPLOYMENT_GROUP_NAME} \
+                                    S3BucketName=${BUCKET_NAME} \
+                                    S3Key=lambda_function.zip
+                        """,
+                        returnStatus: true
+                    )
+                    if (upgradeResult != 0) {
+                        error 'Failed to upgrade CloudFormation stack for Blue-Green.'
+                    } else {
+                        echo 'Stack upgraded successfully. Blue-Green deployment capabilities enabled.'
+                    }
+                }
+            }
+        }
+
         stage('Blue-Green Traffic Shift') {
+            when {
+                expression {
+                    env.INITIAL_DEPLOYMENT == 'false'
+                }
+            }
             steps {
                 script {
                     echo 'Starting blue-green deployment with canary traffic shifting...'
